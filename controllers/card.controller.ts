@@ -3,6 +3,7 @@ import { Card, ICard } from "../models/card.model";
 import { Deck } from "../models/deck.model";
 import { User } from "../models/user.model";
 import { CardHistory } from "../models/cardHistory.model";
+import { generateFlashcard } from "../utils/generateFlashcard";
 
 export const getAllCards = async (
   req: Request,
@@ -41,6 +42,62 @@ export const getAllCardsByDeckId = async (
   } catch (err) {
     res.status(500).send(err);
   }
+};
+
+export const createAiCard = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const user = await User.findById(userId);
+    const deckId = req.params.deckId;
+    const { prompt } = req.params;
+    console.log("createAiCard", "prompt:", prompt, "deckId:", deckId);
+    if (!user) {
+      res.status(401).json({ error: "Access denied" });
+      return;
+    }
+    const aiResponse = await generateFlashcard(
+      `Create 1 flashcard for ${prompt}. Use this format: $question: $answer`
+    );
+    const separatorIndexQuestion = aiResponse.indexOf("$question:");
+    const separatorIndexAnswer = aiResponse.indexOf("$answer:");
+
+    if (separatorIndexQuestion === -1 || separatorIndexAnswer === -1) {
+      throw new Error(
+        "Failed to generate AI card. Question or answer not found."
+      );
+    }
+
+    const question = extractTextUntilNewline(
+      aiResponse,
+      separatorIndexQuestion + 10
+    );
+    const answer = extractTextUntilNewline(
+      aiResponse,
+      separatorIndexAnswer + 8
+    );
+
+    const flashcard = {
+      question,
+      answer,
+    };
+
+    console.log("flashcard", flashcard);
+
+    res.status(201).json(flashcard);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+};
+
+const extractTextUntilNewline = (text: string, startIndex: number): string => {
+  const endIndex = text.indexOf("\n", startIndex);
+  if (endIndex === -1) {
+    return text.substring(startIndex).trim();
+  }
+  return text.substring(startIndex, endIndex).trim();
 };
 
 export const createCard = async (
@@ -120,7 +177,6 @@ export const createMultipleCards = async (
     res.status(500).send(err);
   }
 };
-
 
 export const updateCard = async (
   req: Request,

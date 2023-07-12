@@ -7,6 +7,7 @@ import {
   createCard,
   createMultipleCards,
   deleteCard,
+  createAiCard,
   getAllCards,
   getAllCardsByDeckId,
   updateCard,
@@ -44,6 +45,7 @@ import {
   getUserProgress,
   listActivities,
 } from "./controllers/userRoutes.controller";
+import { generateFlashcard } from "./utils/generateFlashcard";
 
 const secret = "mysecretkey";
 dotenv.config({ path: ".env" });
@@ -120,6 +122,7 @@ function verifyToken(req: Request, res: Response, next: NextFunction) {
 
 app.post("/login", async (req: Request, res: Response) => {
   const user = await User.findOne({ username: req.body.username });
+  console.log("/login", user);
   if (!user) {
     return res.sendStatus(401);
   }
@@ -149,6 +152,7 @@ app.delete("/api/users/:id", verifyToken, deleteUser);
 // card routes
 app.get("/api/cards", verifyToken, getAllCards);
 app.get("/api/decks/:deckId/cards", verifyToken, getAllCardsByDeckId);
+app.post("/api/decks/:deckId/ai/:prompt", verifyToken, createAiCard);
 app.post("/api/cards", verifyToken, createCard);
 app.post("/api/cards/multiple", verifyToken, createMultipleCards);
 app.put("/api/cards/:id", verifyToken, updateCard);
